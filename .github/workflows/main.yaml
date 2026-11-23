@@ -64,9 +64,9 @@ jobs:
           min_r2 = float(os.environ["MIN_TEST_R2"])
           max_gap = float(params["selection"]["max_rmse_gap"])
 
-          test_rmse = metrics["test_rmse"]
-          test_r2 = metrics["test_r2"]
-          gap = metrics["rmse_gap"]
+          test_rmse = float(metrics["rmse"])
+          test_r2 = float(metrics["r2"])
+          gap = float(metrics["champion_rmse_gap"])
           champion = selection["champion"]["model_name"]
           fallback = selection["selection_policy"]["fallback_used"]
 
