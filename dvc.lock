@@ -1,0 +1,163 @@
+schema: '2.0'
+stages:
+  data_ingestion:
+    cmd: python src/data_ingestion.py
+    deps:
+    - path: data/raw/mental_tiredness_score_prediction_dataset.csv
+      hash: md5
+      md5: d7355dae2519e4751c8e2fa523493c8f
+      size: 1348698
+    - path: src/data_ingestion.py
+      hash: md5
+      md5: 8cf15da6a99948a3bba9efb0ca5c5ee4
+      size: 1525
+    outs:
+    - path: data/ingested/mental_tiredness_score.csv
+      hash: md5
+      md5: bbd364179a3c2b24c3cc014571788b81
+      size: 1377512
+  data_preprocessing:
+    cmd: python src/data_preprocessing.py
+    deps:
+    - path: data/ingested/mental_tiredness_score.csv
+      hash: md5
+      md5: bbd364179a3c2b24c3cc014571788b81
+      size: 1377512
+    - path: src/data_preprocessing.py
+      hash: md5
+      md5: c78425bc4c13a73dd806c410639d1122
+      size: 1930
+    params:
+      params.yaml:
+        random_state: 42
+        test_size: 0.3
+    outs:
+    - path: data/processed/test.csv
+      hash: md5
+      md5: e36b62a143d43b5bbebeadbe4d9e4af8
+      size: 413255
+    - path: data/processed/train.csv
+      hash: md5
+      md5: 4369cd3545c72f16f9d0b48a288c48d5
+      size: 964543
+  feature_engineering:
+    cmd: python src/feature_engineering.py
+    deps:
+    - path: data/processed/test.csv
+      hash: md5
+      md5: e36b62a143d43b5bbebeadbe4d9e4af8
+      size: 413255
+    - path: data/processed/train.csv
+      hash: md5
+      md5: 4369cd3545c72f16f9d0b48a288c48d5
+      size: 964543
+    - path: src/feature_engineering.py
+      hash: md5
+      md5: e98aeee4bc600f8ed63e448bb906c5e0
+      size: 2139
+    outs:
+    - path: data/processed/X_test.csv
+      hash: md5
+      md5: 8768b3dd3f2c666ec9b13490b288f53e
+      size: 387285
+    - path: data/processed/X_train.csv
+      hash: md5
+      md5: 2b182ef5f7e2569f1cc5199429feb0e5
+      size: 903962
+    - path: data/processed/y_test.csv
+      hash: md5
+      md5: 0c9fcfe689fa23e4f91e953447ce45c4
+      size: 30471
+    - path: data/processed/y_train.csv
+      hash: md5
+      md5: 5fd691ddd12df7e90ef1c232a4e16a23
+      size: 71082
+  model_building:
+    cmd: python src/model_building.py
+    deps:
+    - path: data/processed/X_train.csv
+      hash: md5
+      md5: 2b182ef5f7e2569f1cc5199429feb0e5
+      size: 903962
+    - path: data/processed/y_train.csv
+      hash: md5
+      md5: 5fd691ddd12df7e90ef1c232a4e16a23
+      size: 71082
+    - path: src/model_building.py
+      hash: md5
+      md5: f7aea7bb485e01354158cc5ef960d169
+      size: 22452
+    params:
+      params.yaml:
+        cv_folds: 5
+        experiment_name: MENTAL_TIREDNESS_DVC_Pipeline
+        measurement:
+          training_time_repeats: 3
+          prediction_n_samples: 50
+          prediction_repeats: 5
+        n_trials: 20
+        random_state: 42
+        selection:
+          max_rmse_gap: 1.0
+          rmse_tolerance: 0.25
+          weights:
+            model_size_mb: 0.4
+            training_time_seconds: 0.3
+            prediction_time_ms: 0.3
+          fallback_if_none_eligible: smallest_gap
+          gap_penalty_in_search: true
+          gap_penalty_weight: 1.0
+    outs:
+    - path: models
+      hash: md5
+      md5: 079019a816ae6d0ba11c63c03fcc04b4.dir
+      size: 16739195
+      nfiles: 7
+    - path: reports/model_comparison.csv
+      hash: md5
+      md5: 18452749427f1716e3edc8a30d296042
+      size: 610
+    - path: reports/model_comparison.md
+      hash: md5
+      md5: 3f6dfe5372fc2183fcf6f87b3775cca0
+      size: 845
+    - path: reports/model_selection.json
+      hash: md5
+      md5: 46c716e942f5ae793b18f72e72bcc2f7
+      size: 5687
+  model_evaluation:
+    cmd: python src/model_evaluation.py
+    deps:
+    - path: data/processed/X_test.csv
+      hash: md5
+      md5: 8768b3dd3f2c666ec9b13490b288f53e
+      size: 387285
+    - path: data/processed/y_test.csv
+      hash: md5
+      md5: 0c9fcfe689fa23e4f91e953447ce45c4
+      size: 30471
+    - path: models
+      hash: md5
+      md5: 079019a816ae6d0ba11c63c03fcc04b4.dir
+      size: 16739195
+      nfiles: 7
+    - path: reports/model_selection.json
+      hash: md5
+      md5: 46c716e942f5ae793b18f72e72bcc2f7
+      size: 5687
+    - path: src/model_evaluation.py
+      hash: md5
+      md5: 8fd331fe772b5903402e3b06cd1bfd7f
+      size: 7080
+    params:
+      params.yaml:
+        experiment_name: MENTAL_TIREDNESS_DVC_Pipeline
+    outs:
+    - path: reports/evaluation_details.json
+      hash: md5
+      md5: 854dd4b07c43662e201f9e206aa4e3ba
+      size: 5147
+    - path: reports/metrics.json
+      hash: md5
+      md5: cc4acd4e51ce9c7ab5a15446108fe43e
+      size: 522

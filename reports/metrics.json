@@ -1,0 +1,13 @@
+{
+    "rmse": 5.926788716128911,
+    "mae": 4.72809144031921,
+    "r2": 0.7627042773110825,
+    "champion_cv_val_rmse": 5.953010993867778,
+    "champion_training_rmse": 5.940008533918903,
+    "champion_validation_rmse": 5.953010993867778,
+    "champion_rmse_gap": 0.013002459948875611,
+    "champion_model_size_mb": 0.005695343017578125,
+    "champion_training_time_seconds": 0.03249429999777931,
+    "champion_prediction_time_ms": 3.477816000013263,
+    "test_vs_validation_rmse_diff": -0.026222277738867206
+}
