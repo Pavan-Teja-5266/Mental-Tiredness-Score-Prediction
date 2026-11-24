@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 import pickle
+import shutil
 import stat
 import subprocess
 import sys
@@ -19,12 +20,12 @@ st.set_page_config(
 )
 
 
-import shutil
-
-
 def run_dvc_pipeline() -> None:
     python_exe = sys.executable
     venv_bin = str(Path(python_exe).parent)
+    rwlock = BASE_DIR / ".dvc" / "tmp" / "rwlock"
+    if rwlock.exists():
+        rwlock.unlink(missing_ok=True)
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         shim_path = Path(tmp_dir) / "python"
