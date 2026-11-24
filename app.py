@@ -1,6 +1,8 @@
+import os
 from pathlib import Path
 import pickle
 import subprocess
+import sys
 
 import pandas as pd
 import streamlit as st
@@ -14,9 +16,18 @@ st.set_page_config(
     layout="centered",
 )
 
+
+def run_dvc_pipeline() -> None:
+    env = os.environ.copy()
+    venv_bin = str(Path(sys.executable).resolve().parent)
+    env["PATH"] = f"{venv_bin}{os.pathsep}{env.get('PATH', '')}"
+    env["VIRTUAL_ENV"] = str(Path(sys.executable).resolve().parent.parent)
+    subprocess.run(["dvc", "repro"], cwd=BASE_DIR, env=env, check=True)
+
+
 if not MODEL_PATH.exists():
     with st.spinner("Running DVC pipeline (dvc repro)..."):
-        subprocess.run(["dvc", "repro"], cwd=BASE_DIR, check=True)
+        run_dvc_pipeline()
 
 with open(MODEL_PATH, "rb") as f:
     model = pickle.load(f)
