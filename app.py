@@ -1,8 +1,10 @@
 import os
 from pathlib import Path
 import pickle
+import stat
 import subprocess
 import sys
+import tempfile
 
 import pandas as pd
 import streamlit as st
@@ -18,11 +20,15 @@ st.set_page_config(
 
 
 def run_dvc_pipeline() -> None:
-    env = os.environ.copy()
-    venv_bin = str(Path(sys.executable).resolve().parent)
-    env["PATH"] = f"{venv_bin}{os.pathsep}{env.get('PATH', '')}"
-    env["VIRTUAL_ENV"] = str(Path(sys.executable).resolve().parent.parent)
-    subprocess.run(["dvc", "repro"], cwd=BASE_DIR, env=env, check=True)
+    python_exe = str(Path(sys.executable).resolve())
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        shim_path = Path(tmp_dir) / "python"
+        shim_path.write_text(f"#!/usr/bin/env sh\nexec \"{python_exe}\" \"$@\"\n", encoding="utf-8")
+        shim_path.chmod(shim_path.stat().st_mode | stat.S_IXUSR)
+
+        env = os.environ.copy()
+        env["PATH"] = f"{tmp_dir}{os.pathsep}{env.get('PATH', '')}"
+        subprocess.run([python_exe, "-m", "dvc", "repro"], cwd=BASE_DIR, env=env, check=True)
 
 
 if not MODEL_PATH.exists():
