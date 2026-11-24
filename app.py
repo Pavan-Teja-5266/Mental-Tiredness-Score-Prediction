@@ -19,18 +19,30 @@ st.set_page_config(
 )
 
 
+import shutil
+
+
 def run_dvc_pipeline() -> None:
-    python_exe = str(Path(sys.executable).resolve())
+    python_exe = sys.executable
+    venv_bin = str(Path(python_exe).parent)
+
     with tempfile.TemporaryDirectory() as tmp_dir:
         shim_path = Path(tmp_dir) / "python"
-        shim_path.write_text(f"#!/usr/bin/env sh\nexec \"{python_exe}\" \"$@\"\n", encoding="utf-8")
+        shim_path.write_text(f'#!/usr/bin/env sh\nexec "{python_exe}" "$@"\n', encoding="utf-8")
         shim_path.chmod(shim_path.stat().st_mode | stat.S_IXUSR)
 
         env = os.environ.copy()
-        env["PATH"] = f"{tmp_dir}{os.pathsep}{env.get('PATH', '')}"
+        env["PATH"] = f"{tmp_dir}{os.pathsep}{venv_bin}{os.pathsep}{env.get('PATH', '')}"
+        env["VIRTUAL_ENV"] = str(Path(python_exe).parent.parent)
+
+        dvc_bin = Path(python_exe).parent / "dvc"
+        cmd = [str(dvc_bin), "repro"] if dvc_bin.exists() else (
+            [shutil.which("dvc"), "repro"] if shutil.which("dvc") else [python_exe, "-m", "dvc", "repro"]
+        )
+
         try:
             subprocess.run(
-                [python_exe, "-m", "dvc", "repro"],
+                cmd,
                 cwd=BASE_DIR,
                 env=env,
                 capture_output=True,
