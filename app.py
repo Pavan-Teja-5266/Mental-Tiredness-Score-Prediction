@@ -28,7 +28,22 @@ def run_dvc_pipeline() -> None:
 
         env = os.environ.copy()
         env["PATH"] = f"{tmp_dir}{os.pathsep}{env.get('PATH', '')}"
-        subprocess.run([python_exe, "-m", "dvc", "repro"], cwd=BASE_DIR, env=env, check=True)
+        try:
+            subprocess.run(
+                [python_exe, "-m", "dvc", "repro"],
+                cwd=BASE_DIR,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError as exc:
+            st.error(f"DVC pipeline failed (exit code {exc.returncode}).")
+            if exc.stdout:
+                st.code(exc.stdout, language="text")
+            if exc.stderr:
+                st.code(exc.stderr, language="text")
+            raise
 
 
 if not MODEL_PATH.exists():
