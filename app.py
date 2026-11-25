@@ -23,9 +23,14 @@ st.set_page_config(
 def run_dvc_pipeline() -> None:
     python_exe = sys.executable
     venv_bin = str(Path(python_exe).parent)
-    rwlock = BASE_DIR / ".dvc" / "tmp" / "rwlock"
-    if rwlock.exists():
-        rwlock.unlink(missing_ok=True)
+
+    dvc_tmp = BASE_DIR / ".dvc" / "tmp"
+    if dvc_tmp.exists():
+        shutil.rmtree(dvc_tmp, ignore_errors=True)
+
+    for folder in (BASE_DIR / "data" / "ingested", BASE_DIR / "data" / "processed"):
+        if folder.exists():
+            shutil.rmtree(folder, ignore_errors=True)
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         shim_path = Path(tmp_dir) / "python"
@@ -35,6 +40,7 @@ def run_dvc_pipeline() -> None:
         env = os.environ.copy()
         env["PATH"] = f"{tmp_dir}{os.pathsep}{venv_bin}{os.pathsep}{env.get('PATH', '')}"
         env["VIRTUAL_ENV"] = str(Path(python_exe).parent.parent)
+        env["DVC_NO_ANALYTICS"] = "1"
 
         dvc_bin = Path(python_exe).parent / "dvc"
         cmd = [str(dvc_bin), "repro"] if dvc_bin.exists() else (
@@ -46,7 +52,8 @@ def run_dvc_pipeline() -> None:
                 cmd,
                 cwd=BASE_DIR,
                 env=env,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
                 text=True,
                 check=True,
             )
@@ -54,8 +61,6 @@ def run_dvc_pipeline() -> None:
             st.error(f"DVC pipeline failed (exit code {exc.returncode}).")
             if exc.stdout:
                 st.code(exc.stdout, language="text")
-            if exc.stderr:
-                st.code(exc.stderr, language="text")
             raise
 
 
@@ -63,8 +68,16 @@ if not MODEL_PATH.exists():
     with st.spinner("Running DVC pipeline (dvc repro)..."):
         run_dvc_pipeline()
 
-with open(MODEL_PATH, "rb") as f:
-    model = pickle.load(f)
+try:
+    with open(MODEL_PATH, "rb") as f:
+        model = pickle.load(f)
+except Exception:
+    if MODEL_PATH.exists():
+        MODEL_PATH.unlink(missing_ok=True)
+    with st.spinner("Regenerating model via DVC pipeline..."):
+        run_dvc_pipeline()
+    with open(MODEL_PATH, "rb") as f:
+        model = pickle.load(f)
 
 st.title("🧠 Mental Tiredness Score Prediction App")
 st.write("Enter your daily routine, workload, and context details below:")
