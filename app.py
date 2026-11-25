@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 
+import joblib
 import pandas as pd
 import streamlit as st
 
@@ -20,7 +21,15 @@ st.set_page_config(
 )
 
 
-def run_dvc_pipeline() -> None:
+def _load_model(path: Path):
+    try:
+        return joblib.load(path)
+    except Exception:
+        with open(path, "rb") as f:
+            return pickle.load(f)
+
+
+def run_dvc_pipeline(force: bool = False) -> None:
     python_exe = sys.executable
     venv_bin = str(Path(python_exe).parent)
 
@@ -37,15 +46,22 @@ def run_dvc_pipeline() -> None:
         shim_path.write_text(f'#!/usr/bin/env sh\nexec "{python_exe}" "$@"\n', encoding="utf-8")
         shim_path.chmod(shim_path.stat().st_mode | stat.S_IXUSR)
 
+        mlruns_dir = Path(tmp_dir) / "mlruns"
+        mlruns_dir.mkdir(parents=True, exist_ok=True)
+
         env = os.environ.copy()
         env["PATH"] = f"{tmp_dir}{os.pathsep}{venv_bin}{os.pathsep}{env.get('PATH', '')}"
         env["VIRTUAL_ENV"] = str(Path(python_exe).parent.parent)
         env["DVC_NO_ANALYTICS"] = "1"
+        env["MLFLOW_TRACKING_URI"] = mlruns_dir.as_uri()
 
         dvc_bin = Path(python_exe).parent / "dvc"
-        cmd = [str(dvc_bin), "repro"] if dvc_bin.exists() else (
-            [shutil.which("dvc"), "repro"] if shutil.which("dvc") else [python_exe, "-m", "dvc", "repro"]
+        base_cmd = (
+            [str(dvc_bin), "repro"]
+            if dvc_bin.exists()
+            else ([shutil.which("dvc"), "repro"] if shutil.which("dvc") else [python_exe, "-m", "dvc", "repro"])
         )
+        cmd = [*base_cmd, "--force"] if force else base_cmd
 
         try:
             subprocess.run(
@@ -69,15 +85,13 @@ if not MODEL_PATH.exists():
         run_dvc_pipeline()
 
 try:
-    with open(MODEL_PATH, "rb") as f:
-        model = pickle.load(f)
+    model = _load_model(MODEL_PATH)
 except Exception:
     if MODEL_PATH.exists():
         MODEL_PATH.unlink(missing_ok=True)
     with st.spinner("Regenerating model via DVC pipeline..."):
-        run_dvc_pipeline()
-    with open(MODEL_PATH, "rb") as f:
-        model = pickle.load(f)
+        run_dvc_pipeline(force=True)
+    model = _load_model(MODEL_PATH)
 
 st.title("🧠 Mental Tiredness Score Prediction App")
 st.write("Enter your daily routine, workload, and context details below:")
