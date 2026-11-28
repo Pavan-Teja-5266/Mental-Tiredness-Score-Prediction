@@ -1,4 +1,5 @@
 from pathlib import Path
+import importlib.util
 import json
 import sys
 
@@ -13,22 +14,49 @@ for path_str in (str(BASE_DIR), str(SRC_DIR)):
     if path_str not in sys.path:
         sys.path.insert(0, path_str)
 
-try:
-    from src.monitor_drift import (
-        DEFAULT_RAW_DATA,
-        DEFAULT_SAMPLE_DIR,
-        FEATURE_COLUMNS,
-        generate_sample_datasets,
-        run_drift_monitoring,
-    )
-except ModuleNotFoundError:
-    from monitor_drift import (
-        DEFAULT_RAW_DATA,
-        DEFAULT_SAMPLE_DIR,
-        FEATURE_COLUMNS,
-        generate_sample_datasets,
-        run_drift_monitoring,
-    )
+FEATURE_COLUMNS_FALLBACK = [
+    "number_of_decisions_made",
+    "context_switch_count",
+    "notifications_received",
+    "screen_time_min",
+    "deep_work_min",
+    "task_complexity_avg",
+    "caffeine_mg",
+    "break_frequency",
+    "sleep_hours",
+    "deep_sleep_pct",
+    "hydration_l",
+    "mood",
+    "work_type",
+    "work_environment",
+    "noise_level_db",
+    "temperature_c",
+    "workload_score",
+]
+
+
+def _load_drift_module():
+    drift_file = SRC_DIR / "monitor_drift.py"
+    if drift_file.exists():
+        spec = importlib.util.spec_from_file_location("monitor_drift", str(drift_file))
+        if spec and spec.loader:
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return module
+    return None
+
+
+_drift_mod = _load_drift_module()
+
+FEATURE_COLUMNS = getattr(_drift_mod, "FEATURE_COLUMNS", FEATURE_COLUMNS_FALLBACK)
+DEFAULT_RAW_DATA = getattr(
+    _drift_mod,
+    "DEFAULT_RAW_DATA",
+    BASE_DIR / "data" / "raw" / "mental_tiredness_score_prediction_dataset.csv",
+)
+DEFAULT_SAMPLE_DIR = getattr(_drift_mod, "DEFAULT_SAMPLE_DIR", BASE_DIR / "data" / "monitoring")
+run_drift_monitoring = getattr(_drift_mod, "run_drift_monitoring", None)
+generate_sample_datasets = getattr(_drift_mod, "generate_sample_datasets", None)
 
 MODEL_PATH = BASE_DIR / "models" / "model.pkl"
 METRICS_PATH = BASE_DIR / "reports" / "metrics.json"
@@ -210,138 +238,144 @@ def main():
 
     with tab_drift:
         st.subheader("Current vs. Reference Drift Check")
-        action_col1, action_col2, action_col3 = st.columns(3)
-
-        normal_sample_path = DEFAULT_SAMPLE_DIR / "normal_traffic.csv"
-        drift_sample_path = DEFAULT_SAMPLE_DIR / "simulated_drift.csv"
-
-        options = [
-            path
-            for path in [
-                str(normal_sample_path) if normal_sample_path.exists() else None,
-                str(drift_sample_path) if drift_sample_path.exists() else None,
-                str(INFERENCE_LOG_PATH) if INFERENCE_LOG_PATH.exists() else None,
-            ]
-            if path is not None
-        ] or [str(normal_sample_path)]
-
-        if "drift_batch_select" not in st.session_state or st.session_state["drift_batch_select"] not in options:
-            st.session_state["drift_batch_select"] = options[0]
-
-        with action_col1:
-            if st.button("Generate Healthy Sample Logs"):
-                source_csv = REFERENCE_DATA_PATH if REFERENCE_DATA_PATH.exists() else DEFAULT_RAW_DATA
-                normal_p, drift_p = generate_sample_datasets(source_csv, output_dir=DEFAULT_SAMPLE_DIR)
-                for p in (str(normal_p), str(drift_p)):
-                    if p not in options:
-                        options.insert(0, p)
-                st.session_state["drift_batch_select"] = str(normal_p)
-                run_drift_monitoring(
-                    reference_path=REFERENCE_DATA_PATH,
-                    current_path=normal_p,
-                    model_path=MODEL_PATH,
-                    report_path=DRIFT_JSON_PATH,
-                )
-
-        with action_col2:
-            if st.button("Simulate Drifted Traffic"):
-                source_csv = REFERENCE_DATA_PATH if REFERENCE_DATA_PATH.exists() else DEFAULT_RAW_DATA
-                normal_p, drift_p = generate_sample_datasets(source_csv, output_dir=DEFAULT_SAMPLE_DIR)
-                for p in (str(normal_p), str(drift_p)):
-                    if p not in options:
-                        options.insert(0, p)
-                st.session_state["drift_batch_select"] = str(drift_p)
-                run_drift_monitoring(
-                    reference_path=REFERENCE_DATA_PATH,
-                    current_path=drift_p,
-                    model_path=MODEL_PATH,
-                    report_path=DRIFT_JSON_PATH,
-                )
-
-        with action_col3:
-            run_check = st.button("Run Drift Analysis Now", type="primary")
-
-        batch_choice = st.selectbox(
-            "Batch Dataset to Evaluate",
-            options=options,
-            key="drift_batch_select",
-        )
-
-        if run_check:
-            if not REFERENCE_DATA_PATH.exists():
-                st.error(f"Reference dataset missing at `{REFERENCE_DATA_PATH}`.")
-            else:
-                target_batch = Path(batch_choice)
-                if not target_batch.exists():
-                    source_csv = REFERENCE_DATA_PATH
-                    generate_sample_datasets(source_csv, output_dir=DEFAULT_SAMPLE_DIR)
-                    target_batch = normal_sample_path
-
-                run_drift_monitoring(
-                    reference_path=REFERENCE_DATA_PATH,
-                    current_path=target_batch,
-                    model_path=MODEL_PATH,
-                    report_path=DRIFT_JSON_PATH,
-                )
-
-        drift_report = load_json_if_exists(DRIFT_JSON_PATH)
-        if drift_report:
-            overall = drift_report.get("overall_status", "OK")
-            if overall == "MAJOR_DRIFT":
-                st.error(f"**Status:** 🚨 {overall}")
-            elif overall == "MINOR_DRIFT":
-                st.warning(f"**Status:** ⚠️ {overall}")
-            else:
-                st.success(f"**Status:** ✅ {overall}")
-
-            st.caption(
-                f"Reference rows: **{drift_report.get('reference_rows', 0)}** | "
-                f"Current rows: **{drift_report.get('current_rows', 0)}**"
+        if run_drift_monitoring is None or generate_sample_datasets is None:
+            st.warning(
+                "`src/monitor_drift.py` was not found in the deployment environment. "
+                "Push `src/monitor_drift.py` to your repository and reboot the app."
             )
-
-            drifted_list = drift_report.get("drifted_features", [])
-            st.write(
-                f"Drifted features: **{len(drifted_list)}** "
-                f"({', '.join(drifted_list) if drifted_list else 'None'})"
-            )
-
-            if drift_report.get("prediction_drift"):
-                pd_info = drift_report["prediction_drift"]
-                p1, p2, p3, p4 = st.columns(4)
-                p1.metric("Prediction PSI", f"{pd_info.get('psi', 0.0):.4f}")
-                p2.metric("KS p-value", f"{pd_info.get('ks_pvalue', 0.0):.4f}")
-                p3.metric("Ref Mean Score", f"{pd_info.get('ref_pred_mean', 0.0):.2f}")
-                p4.metric("Cur Mean Score", f"{pd_info.get('cur_pred_mean', 0.0):.2f}")
-
-            feat_rows = []
-            for feat_name, info in drift_report.get("numeric_features", {}).items():
-                feat_rows.append(
-                    {
-                        "Feature": feat_name,
-                        "Type": "numeric",
-                        "PSI": info.get("psi", 0.0),
-                        "KS p-value": info.get("ks_pvalue", 0.0),
-                        "Ref Mean": info.get("ref_mean"),
-                        "Cur Mean": info.get("cur_mean"),
-                        "Status": info.get("status", "OK"),
-                    }
-                )
-            for feat_name, info in drift_report.get("categorical_features", {}).items():
-                feat_rows.append(
-                    {
-                        "Feature": feat_name,
-                        "Type": "categorical",
-                        "PSI": info.get("psi", 0.0),
-                        "KS p-value": None,
-                        "Ref Mean": None,
-                        "Cur Mean": None,
-                        "Status": info.get("status", "OK"),
-                    }
-                )
-            if feat_rows:
-                st.dataframe(pd.DataFrame(feat_rows), use_container_width=True)
         else:
-            st.info("No drift report generated yet. Click **Run Drift Analysis Now** above.")
+            action_col1, action_col2, action_col3 = st.columns(3)
+
+            normal_sample_path = DEFAULT_SAMPLE_DIR / "normal_traffic.csv"
+            drift_sample_path = DEFAULT_SAMPLE_DIR / "simulated_drift.csv"
+
+            options = [
+                path
+                for path in [
+                    str(normal_sample_path) if normal_sample_path.exists() else None,
+                    str(drift_sample_path) if drift_sample_path.exists() else None,
+                    str(INFERENCE_LOG_PATH) if INFERENCE_LOG_PATH.exists() else None,
+                ]
+                if path is not None
+            ] or [str(normal_sample_path)]
+
+            if "drift_batch_select" not in st.session_state or st.session_state["drift_batch_select"] not in options:
+                st.session_state["drift_batch_select"] = options[0]
+
+            with action_col1:
+                if st.button("Generate Healthy Sample Logs"):
+                    source_csv = REFERENCE_DATA_PATH if REFERENCE_DATA_PATH.exists() else DEFAULT_RAW_DATA
+                    normal_p, drift_p = generate_sample_datasets(source_csv, output_dir=DEFAULT_SAMPLE_DIR)
+                    for p in (str(normal_p), str(drift_p)):
+                        if p not in options:
+                            options.insert(0, p)
+                    st.session_state["drift_batch_select"] = str(normal_p)
+                    run_drift_monitoring(
+                        reference_path=REFERENCE_DATA_PATH,
+                        current_path=normal_p,
+                        model_path=MODEL_PATH,
+                        report_path=DRIFT_JSON_PATH,
+                    )
+
+            with action_col2:
+                if st.button("Simulate Drifted Traffic"):
+                    source_csv = REFERENCE_DATA_PATH if REFERENCE_DATA_PATH.exists() else DEFAULT_RAW_DATA
+                    normal_p, drift_p = generate_sample_datasets(source_csv, output_dir=DEFAULT_SAMPLE_DIR)
+                    for p in (str(normal_p), str(drift_p)):
+                        if p not in options:
+                            options.insert(0, p)
+                    st.session_state["drift_batch_select"] = str(drift_p)
+                    run_drift_monitoring(
+                        reference_path=REFERENCE_DATA_PATH,
+                        current_path=drift_p,
+                        model_path=MODEL_PATH,
+                        report_path=DRIFT_JSON_PATH,
+                    )
+
+            with action_col3:
+                run_check = st.button("Run Drift Analysis Now", type="primary")
+
+            batch_choice = st.selectbox(
+                "Batch Dataset to Evaluate",
+                options=options,
+                key="drift_batch_select",
+            )
+
+            if run_check:
+                if not REFERENCE_DATA_PATH.exists():
+                    st.error(f"Reference dataset missing at `{REFERENCE_DATA_PATH}`.")
+                else:
+                    target_batch = Path(batch_choice)
+                    if not target_batch.exists():
+                        source_csv = REFERENCE_DATA_PATH
+                        generate_sample_datasets(source_csv, output_dir=DEFAULT_SAMPLE_DIR)
+                        target_batch = normal_sample_path
+
+                    run_drift_monitoring(
+                        reference_path=REFERENCE_DATA_PATH,
+                        current_path=target_batch,
+                        model_path=MODEL_PATH,
+                        report_path=DRIFT_JSON_PATH,
+                    )
+
+            drift_report = load_json_if_exists(DRIFT_JSON_PATH)
+            if drift_report:
+                overall = drift_report.get("overall_status", "OK")
+                if overall == "MAJOR_DRIFT":
+                    st.error(f"**Status:** 🚨 {overall}")
+                elif overall == "MINOR_DRIFT":
+                    st.warning(f"**Status:** ⚠️ {overall}")
+                else:
+                    st.success(f"**Status:** ✅ {overall}")
+
+                st.caption(
+                    f"Reference rows: **{drift_report.get('reference_rows', 0)}** | "
+                    f"Current rows: **{drift_report.get('current_rows', 0)}**"
+                )
+
+                drifted_list = drift_report.get("drifted_features", [])
+                st.write(
+                    f"Drifted features: **{len(drifted_list)}** "
+                    f"({', '.join(drifted_list) if drifted_list else 'None'})"
+                )
+
+                if drift_report.get("prediction_drift"):
+                    pd_info = drift_report["prediction_drift"]
+                    p1, p2, p3, p4 = st.columns(4)
+                    p1.metric("Prediction PSI", f"{pd_info.get('psi', 0.0):.4f}")
+                    p2.metric("KS p-value", f"{pd_info.get('ks_pvalue', 0.0):.4f}")
+                    p3.metric("Ref Mean Score", f"{pd_info.get('ref_pred_mean', 0.0):.2f}")
+                    p4.metric("Cur Mean Score", f"{pd_info.get('cur_pred_mean', 0.0):.2f}")
+
+                feat_rows = []
+                for feat_name, info in drift_report.get("numeric_features", {}).items():
+                    feat_rows.append(
+                        {
+                            "Feature": feat_name,
+                            "Type": "numeric",
+                            "PSI": info.get("psi", 0.0),
+                            "KS p-value": info.get("ks_pvalue", 0.0),
+                            "Ref Mean": info.get("ref_mean"),
+                            "Cur Mean": info.get("cur_mean"),
+                            "Status": info.get("status", "OK"),
+                        }
+                    )
+                for feat_name, info in drift_report.get("categorical_features", {}).items():
+                    feat_rows.append(
+                        {
+                            "Feature": feat_name,
+                            "Type": "categorical",
+                            "PSI": info.get("psi", 0.0),
+                            "KS p-value": None,
+                            "Ref Mean": None,
+                            "Cur Mean": None,
+                            "Status": info.get("status", "OK"),
+                        }
+                    )
+                if feat_rows:
+                    st.dataframe(pd.DataFrame(feat_rows), use_container_width=True)
+            else:
+                st.info("No drift report generated yet. Click **Run Drift Analysis Now** above.")
 
 
 if __name__ == "__main__":
