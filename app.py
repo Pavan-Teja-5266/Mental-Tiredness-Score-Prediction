@@ -1,12 +1,4 @@
-import os
 from pathlib import Path
-import pickle
-import shutil
-import stat
-import subprocess
-import sys
-import tempfile
-import threading
 
 import joblib
 import pandas as pd
@@ -14,7 +6,6 @@ import streamlit as st
 
 BASE_DIR = Path(__file__).resolve().parent
 MODEL_PATH = BASE_DIR / "models" / "model.pkl"
-_PIPELINE_LOCK = threading.Lock()
 
 FEATURE_COLUMNS = [
     "number_of_decisions_made",
@@ -43,92 +34,21 @@ st.set_page_config(
 )
 
 
-def _load_model(path: Path):
-    try:
-        return joblib.load(path)
-    except Exception:
-        with open(path, "rb") as f:
-            return pickle.load(f)
+@st.cache_resource
+def load_model(path: Path):
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Trained model not found at '{path}'. Run your training pipeline locally and commit models/model.pkl."
+        )
+    return joblib.load(path)
 
-
-def _clear_dvc_locks(dvc_dir: Path) -> None:
-    if not dvc_dir.exists():
-        return
-    dvc_tmp = dvc_dir / "tmp"
-    if dvc_tmp.exists():
-        shutil.rmtree(dvc_tmp, ignore_errors=True)
-    for lock_item in dvc_dir.rglob("*lock*"):
-        if lock_item.is_file():
-            lock_item.unlink(missing_ok=True)
-        elif lock_item.is_dir():
-            shutil.rmtree(lock_item, ignore_errors=True)
-
-
-def run_dvc_pipeline(force: bool = False) -> None:
-    with _PIPELINE_LOCK:
-        python_exe = sys.executable
-        venv_bin = str(Path(python_exe).parent)
-
-        _clear_dvc_locks(BASE_DIR / ".dvc")
-
-        for folder in (BASE_DIR / "data" / "ingested", BASE_DIR / "data" / "processed"):
-            if folder.exists():
-                shutil.rmtree(folder, ignore_errors=True)
-
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            shim_path = Path(tmp_dir) / "python"
-            shim_path.write_text(f'#!/usr/bin/env sh\nexec "{python_exe}" "$@"\n', encoding="utf-8")
-            shim_path.chmod(shim_path.stat().st_mode | stat.S_IXUSR)
-
-            mlruns_dir = Path(tmp_dir) / "mlruns"
-            mlruns_dir.mkdir(parents=True, exist_ok=True)
-            mlflow_db = (mlruns_dir / "mlflow.db").as_posix()
-
-            env = os.environ.copy()
-            env["PATH"] = f"{tmp_dir}{os.pathsep}{venv_bin}{os.pathsep}{env.get('PATH', '')}"
-            env["VIRTUAL_ENV"] = str(Path(python_exe).parent.parent)
-            env["DVC_NO_ANALYTICS"] = "1"
-            env["MLFLOW_TRACKING_URI"] = f"sqlite:///{mlflow_db}"
-            env["MLFLOW_ARTIFACT_ROOT"] = mlruns_dir.as_uri()
-
-            dvc_bin = Path(python_exe).parent / "dvc"
-            base_cmd = (
-                [str(dvc_bin), "repro"]
-                if dvc_bin.exists()
-                else ([shutil.which("dvc"), "repro"] if shutil.which("dvc") else [python_exe, "-m", "dvc", "repro"])
-            )
-            cmd = [*base_cmd, "--force"] if force else base_cmd
-
-            try:
-                subprocess.run(
-                    cmd,
-                    cwd=BASE_DIR,
-                    env=env,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                    check=True,
-                )
-            except subprocess.CalledProcessError as exc:
-                _clear_dvc_locks(BASE_DIR / ".dvc")
-                st.error(f"DVC pipeline failed (exit code {exc.returncode}).")
-                if exc.stdout:
-                    st.code(exc.stdout, language="text")
-                raise
-
-
-if not MODEL_PATH.exists():
-    with st.spinner("Running DVC pipeline (dvc repro)..."):
-        run_dvc_pipeline()
 
 try:
-    model = _load_model(MODEL_PATH)
-except Exception:
-    if MODEL_PATH.exists():
-        MODEL_PATH.unlink(missing_ok=True)
-    with st.spinner("Regenerating model via DVC pipeline..."):
-        run_dvc_pipeline(force=True)
-    model = _load_model(MODEL_PATH)
+    model = load_model(MODEL_PATH)
+except Exception as exc:
+    st.error("Failed to load the prediction model.")
+    st.exception(exc)
+    st.stop()
 
 st.title("🧠 Mental Tiredness Score Prediction App")
 st.write("Enter your daily routine, workload, and environment details below:")
