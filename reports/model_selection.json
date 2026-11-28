@@ -1,0 +1,154 @@
+{
+    "KNN": {
+        "best_params": {
+            "scaler_type": "standard",
+            "n_neighbors": 19,
+            "weights": "uniform",
+            "p": 2
+        },
+        "model_size_mb": 2.0079336166381836,
+        "training_time_seconds": 0.027946800000790972,
+        "prediction_time_ms": 4.001935999986017,
+        "training_rmse": 7.338184539575745,
+        "validation_rmse": 7.795745704876855,
+        "rmse_gap": 0.4575611653011098,
+        "search_time_seconds": 254.29153156280518,
+        "model_path": "models/KNN.pkl",
+        "eligible": true,
+        "status": "eligible_but_above_rmse_tolerance"
+    },
+    "DecisionTree": {
+        "best_params": {
+            "scaler_type": "minmax",
+            "criterion": "squared_error",
+            "max_depth": 6,
+            "min_samples_split": 15,
+            "min_samples_leaf": 17,
+            "max_features": null
+        },
+        "model_size_mb": 0.014751434326171875,
+        "training_time_seconds": 0.06613510000170209,
+        "prediction_time_ms": 3.4933100000489503,
+        "training_rmse": 8.916153106278884,
+        "validation_rmse": 9.526402896257178,
+        "rmse_gap": 0.6102497899782939,
+        "search_time_seconds": 8.284108877182007,
+        "model_path": "models/DecisionTree.pkl",
+        "eligible": true,
+        "status": "eligible_but_above_rmse_tolerance"
+    },
+    "SVR": {
+        "best_params": {
+            "scaler_type": "minmax",
+            "kernel": "linear",
+            "C": 3.796389140889237,
+            "epsilon": 0.3961841240674413
+        },
+        "model_size_mb": 2.0177221298217773,
+        "training_time_seconds": 2.1020155000005616,
+        "prediction_time_ms": 3.735582000008435,
+        "training_rmse": 5.942911917284252,
+        "validation_rmse": 5.956888843709243,
+        "rmse_gap": 0.013976926424991376,
+        "search_time_seconds": 909.6940650939941,
+        "model_path": "models/SVR.pkl",
+        "eligible": true,
+        "selection_cost": 1.0,
+        "status": "finalist_runner_up",
+        "finalist_rank": 3
+    },
+    "Ridge": {
+        "best_params": {
+            "scaler_type": "minmax",
+            "alpha": 0.0033751616616190376,
+            "solver": "lsqr"
+        },
+        "model_size_mb": 0.005695343017578125,
+        "training_time_seconds": 0.03249429999777931,
+        "prediction_time_ms": 3.477816000013263,
+        "training_rmse": 5.940008533918903,
+        "validation_rmse": 5.953010993867778,
+        "rmse_gap": 0.013002459948875611,
+        "search_time_seconds": 6.203983306884766,
+        "model_path": "models/Ridge.pkl",
+        "eligible": true,
+        "selection_cost": 0.0,
+        "status": "champion",
+        "finalist_rank": 1
+    },
+    "RandomForest": {
+        "best_params": {
+            "scaler_type": "standard",
+            "n_estimators": 250,
+            "max_depth": 18,
+            "min_samples_split": 10,
+            "min_samples_leaf": 15,
+            "max_features": "sqrt"
+        },
+        "model_size_mb": 11.718401908874512,
+        "training_time_seconds": 0.5940614999999525,
+        "prediction_time_ms": 38.28487799997674,
+        "training_rmse": 6.943120862781678,
+        "validation_rmse": 7.98706873715183,
+        "rmse_gap": 1.0439478743701525,
+        "search_time_seconds": 73.34241390228271,
+        "model_path": "models/RandomForest.pkl",
+        "eligible": false,
+        "status": "rejected_rmse_gap>=1.0"
+    },
+    "GradientBoosting": {
+        "best_params": {
+            "scaler_type": "minmax",
+            "n_estimators": 250,
+            "learning_rate": 0.13780336485751998,
+            "max_depth": 2,
+            "min_samples_split": 8,
+            "min_samples_leaf": 3,
+            "max_features": null,
+            "subsample": 0.5317791751430119
+        },
+        "model_size_mb": 0.1935405731201172,
+        "training_time_seconds": 1.991341900000407,
+        "prediction_time_ms": 3.706787999981316,
+        "training_rmse": 5.7296483198201225,
+        "validation_rmse": 6.172762912744131,
+        "rmse_gap": 0.4431145929240081,
+        "search_time_seconds": 188.2989456653595,
+        "model_path": "models/GradientBoosting.pkl",
+        "eligible": true,
+        "selection_cost": 0.5877893261084776,
+        "status": "finalist_runner_up",
+        "finalist_rank": 2
+    },
+    "champion": {
+        "model_name": "Ridge",
+        "best_cv_val_rmse": 5.953010993867778,
+        "display_name": "Ridge Regression",
+        "criteria": {
+            "model_size_mb": 0.005695343017578125,
+            "training_time_seconds": 0.03249429999777931,
+            "prediction_time_ms": 3.477816000013263,
+            "training_rmse": 5.940008533918903,
+            "validation_rmse": 5.953010993867778,
+            "rmse_gap": 0.013002459948875611
+        },
+        "explanation": "Ridge Regression selected: passed RMSE-gap rule (< 1.0); 3 finalist(s) within 0.25 of best validation RMSE (5.9530); lowest weighted size/train-time/predict-time cost."
+    },
+    "champion_model_path": "models/model.pkl",
+    "selection_policy": {
+        "max_rmse_gap (strictly below)": 1.0,
+        "rmse_tolerance": 0.25,
+        "weights": {
+            "model_size_mb": 0.4,
+            "training_time_seconds": 0.3,
+            "prediction_time_ms": 0.3
+        },
+        "fallback_used": false,
+        "finalist_ranking": [
+            "Ridge",
+            "GradientBoosting",
+            "SVR"
+        ],
+        "selection_data": "training data only (CV validation); test set untouched"
+    }
+}

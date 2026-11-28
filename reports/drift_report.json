@@ -1,0 +1,246 @@
+{
+  "overall_status": "MAJOR_DRIFT",
+  "reference_rows": 10500,
+  "current_rows": 200,
+  "drifted_features": [
+    "context_switch_count",
+    "notifications_received",
+    "screen_time_min",
+    "sleep_hours",
+    "workload_score",
+    "mood",
+    "work_environment"
+  ],
+  "numeric_features": {
+    "number_of_decisions_made": {
+      "psi": 0.0205,
+      "ks_stat": 0.0593,
+      "ks_pvalue": 0.477093,
+      "ref_mean": 120.05,
+      "cur_mean": 120.72,
+      "mean_shift": 0.67,
+      "status": "OK"
+    },
+    "context_switch_count": {
+      "psi": 12.4691,
+      "ks_stat": 0.9858,
+      "ks_pvalue": 0.0,
+      "ref_mean": 7.9787,
+      "cur_mean": 29.952,
+      "mean_shift": 21.9733,
+      "status": "MAJOR_DRIFT"
+    },
+    "notifications_received": {
+      "psi": 12.0422,
+      "ks_stat": 1.0,
+      "ks_pvalue": 0.0,
+      "ref_mean": 64.9418,
+      "cur_mean": 172.74,
+      "mean_shift": 107.7982,
+      "status": "MAJOR_DRIFT"
+    },
+    "screen_time_min": {
+      "psi": 1.7957,
+      "ks_stat": 0.5589,
+      "ks_pvalue": 0.0,
+      "ref_mean": 301.9533,
+      "cur_mean": 526.0958,
+      "mean_shift": 224.1425,
+      "status": "MAJOR_DRIFT"
+    },
+    "deep_work_min": {
+      "psi": 0.0281,
+      "ks_stat": 0.0461,
+      "ks_pvalue": 0.780404,
+      "ref_mean": 97.0568,
+      "cur_mean": 97.8865,
+      "mean_shift": 0.8297,
+      "status": "OK"
+    },
+    "task_complexity_avg": {
+      "psi": 0.029,
+      "ks_stat": 0.0338,
+      "ks_pvalue": 0.972975,
+      "ref_mean": 5.5017,
+      "cur_mean": 5.5795,
+      "mean_shift": 0.0778,
+      "status": "OK"
+    },
+    "caffeine_mg": {
+      "psi": 0.0438,
+      "ks_stat": 0.0625,
+      "ks_pvalue": 0.411855,
+      "ref_mean": 131.0809,
+      "cur_mean": 125.178,
+      "mean_shift": -5.9029,
+      "status": "OK"
+    },
+    "break_frequency": {
+      "psi": 0.0182,
+      "ks_stat": 0.0455,
+      "ks_pvalue": 0.793929,
+      "ref_mean": 4.0144,
+      "cur_mean": 3.74,
+      "mean_shift": -0.2744,
+      "status": "OK"
+    },
+    "sleep_hours": {
+      "psi": 3.7081,
+      "ks_stat": 0.552,
+      "ks_pvalue": 0.0,
+      "ref_mean": 6.8902,
+      "cur_mean": 4.8957,
+      "mean_shift": -1.9945,
+      "status": "MAJOR_DRIFT"
+    },
+    "deep_sleep_pct": {
+      "psi": 0.0634,
+      "ks_stat": 0.0512,
+      "ks_pvalue": 0.662831,
+      "ref_mean": 19.0349,
+      "cur_mean": 18.6459,
+      "mean_shift": -0.389,
+      "status": "OK"
+    },
+    "hydration_l": {
+      "psi": 0.0409,
+      "ks_stat": 0.0759,
+      "ks_pvalue": 0.19843,
+      "ref_mean": 1.898,
+      "cur_mean": 1.9568,
+      "mean_shift": 0.0588,
+      "status": "OK"
+    },
+    "noise_level_db": {
+      "psi": 0.0212,
+      "ks_stat": 0.062,
+      "ks_pvalue": 0.420439,
+      "ref_mean": 47.8998,
+      "cur_mean": 48.884,
+      "mean_shift": 0.9842,
+      "status": "OK"
+    },
+    "temperature_c": {
+      "psi": 0.0234,
+      "ks_stat": 0.0581,
+      "ks_pvalue": 0.503085,
+      "ref_mean": 22.9838,
+      "cur_mean": 22.825,
+      "mean_shift": -0.1588,
+      "status": "OK"
+    },
+    "workload_score": {
+      "psi": 12.2743,
+      "ks_stat": 1.0,
+      "ks_pvalue": 0.0,
+      "ref_mean": 5.7065,
+      "cur_mean": 27.9319,
+      "mean_shift": 22.2254,
+      "status": "MAJOR_DRIFT"
+    }
+  },
+  "categorical_features": {
+    "mood": {
+      "psi": 26.573,
+      "tv_distance": 1.0,
+      "status": "MAJOR_DRIFT",
+      "top_category_shifts": [
+        {
+          "category": "Stressed",
+          "ref_share": 0.0,
+          "cur_share": 1.0,
+          "delta": 1.0
+        },
+        {
+          "category": "Happy",
+          "ref_share": 0.4164,
+          "cur_share": 0.0,
+          "delta": -0.4164
+        },
+        {
+          "category": "Neutral",
+          "ref_share": 0.3777,
+          "cur_share": 0.0,
+          "delta": -0.3777
+        },
+        {
+          "category": "Low",
+          "ref_share": 0.2059,
+          "cur_share": 0.0,
+          "delta": -0.2059
+        }
+      ]
+    },
+    "work_type": {
+      "psi": 0.013,
+      "tv_distance": 0.0545,
+      "status": "OK",
+      "top_category_shifts": [
+        {
+          "category": "Office",
+          "ref_share": 0.3075,
+          "cur_share": 0.265,
+          "delta": -0.0425
+        },
+        {
+          "category": "Student",
+          "ref_share": 0.3501,
+          "cur_share": 0.39,
+          "delta": 0.0399
+        },
+        {
+          "category": "Remote",
+          "ref_share": 0.2454,
+          "cur_share": 0.26,
+          "delta": 0.0146
+        },
+        {
+          "category": "Manual",
+          "ref_share": 0.097,
+          "cur_share": 0.085,
+          "delta": -0.012
+        }
+      ]
+    },
+    "work_environment": {
+      "psi": 26.5749,
+      "tv_distance": 1.0,
+      "status": "MAJOR_DRIFT",
+      "top_category_shifts": [
+        {
+          "category": "Noisy / Open Office",
+          "ref_share": 0.0,
+          "cur_share": 1.0,
+          "delta": 1.0
+        },
+        {
+          "category": "Moderate Noise",
+          "ref_share": 0.3994,
+          "cur_share": 0.0,
+          "delta": -0.3994
+        },
+        {
+          "category": "Quiet",
+          "ref_share": 0.3989,
+          "cur_share": 0.0,
+          "delta": -0.3989
+        },
+        {
+          "category": "Noisy",
+          "ref_share": 0.2017,
+          "cur_share": 0.0,
+          "delta": -0.2017
+        }
+      ]
+    }
+  },
+  "prediction_drift": {
+    "psi": 12.4339,
+    "ks_stat": 1.0,
+    "ks_pvalue": 0.0,
+    "ref_pred_mean": 25.2351,
+    "cur_pred_mean": 115.8758,
+    "pred_mean_shift": 90.6407,
+    "status": "MAJOR_DRIFT"
+  }
+}
