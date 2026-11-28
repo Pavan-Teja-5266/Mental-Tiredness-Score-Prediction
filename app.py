@@ -82,12 +82,14 @@ def run_dvc_pipeline(force: bool = False) -> None:
 
             mlruns_dir = Path(tmp_dir) / "mlruns"
             mlruns_dir.mkdir(parents=True, exist_ok=True)
+            mlflow_db = (mlruns_dir / "mlflow.db").as_posix()
 
             env = os.environ.copy()
             env["PATH"] = f"{tmp_dir}{os.pathsep}{venv_bin}{os.pathsep}{env.get('PATH', '')}"
             env["VIRTUAL_ENV"] = str(Path(python_exe).parent.parent)
             env["DVC_NO_ANALYTICS"] = "1"
-            env["MLFLOW_TRACKING_URI"] = mlruns_dir.as_uri()
+            env["MLFLOW_TRACKING_URI"] = f"sqlite:///{mlflow_db}"
+            env["MLFLOW_ARTIFACT_ROOT"] = mlruns_dir.as_uri()
 
             dvc_bin = Path(python_exe).parent / "dvc"
             base_cmd = (
